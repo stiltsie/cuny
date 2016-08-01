@@ -1,0 +1,22 @@
+---
+title: "Assignment3"
+author: "Alex Low"
+date: "July 31, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r, echo="FALSE"}
+theUrl <- "https://github.com/stiltsie/cuny/blob/master/agaricus-lepiota.sql"
+data3 <- read.table (file= theUrl, header = TRUE, sep = ",")
+rassign3frame <- data.frame(data3[1:10, 1:5])
+names(rassign3frame) <- c("edible", "cap-shape", "cap-surface", "cap-color", "bruises?")
+library(stringr)
+str_replace(r_assignment_3, pattern="e",replacement="edible")
+
+```
