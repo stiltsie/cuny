@@ -1,0 +1,37 @@
+---
+title: "Assign3_Rev"
+author: "Alex Low"
+date: "August 4, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+
+#Andy, unfortunately this code seemed to work in R but not in RMarkdown - I'm clearly doing something wrong!  I tried a few alternatives, including pointing to the same data set in GitHub and using the RCurl library, but still no luck.
+
+'agaricus-lepiota' <- read.csv("https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+
+R_assign3b <- data.frame(`agaricus-lepiota`[1:10,1:4])
+colnames(R_assign3b) <- c("edible", "cap-shape", "cap-surface", "cap-color")
+R_assign3b$`edible`[R_assign3b$`edible`=="e"] <- "edible"
+R_assign3b$`edible`[R_assign3b$`edible`=="p"] <- "poisonous"
+R_assign3b$`cap-shape`[R_assign3b$`cap-shape`=="b"] <- "bell"
+R_assign3b$`cap-shape`[R_assign3b$`cap-shape`=="x"] <- "convex"
+R_assign3b$`cap-surface`[R_assign3b$`cap-surface`=="s"] <- "smooth"
+R_assign3b$`cap-surface`[R_assign3b$`cap-surface`=="y"] <- "scaly"
+R_assign3b$`cap-color`[R_assign3b$`cap-color`=="y"] <- "yellow"
+R_assign3b$`cap-color`[R_assign3b$`cap-color`=="w"] <- "white"
+R_assign3b$`cap-color`[R_assign3b$`cap-color`=="g"] <- "green"
+
+#Andy, I also tried using the str_detect command with some success but didn't quite succeed limiting a detection to a value of "w" on its own, since it also detected and replaced the w in the value yellow. I'm sure there's a way.
+
+View(R_assign3b)
+
+```
+
