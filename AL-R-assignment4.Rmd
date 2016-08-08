@@ -1,0 +1,62 @@
+---
+title: "Assignment 4"
+author: "Alex Low"
+date: "August 7, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Assignment for CUNY R Bridge Course (for MS Data Analytics Program), Professor Andrew Catlin
+
+#### For this assignment I used a 1986 baseball data set from the Rdatasets archive (http://vincentarelbundock.github.io/Rdatasets/). Source is SAS System for Statistical Graphics, First Edition, page A2.3.
+
+```{r}
+library(RCurl)
+url <- "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/master/csv/vcd/Baseball.csv"
+baseball_data <- getURL(url)
+
+Baseball <- read.csv(baseball_data, header = TRUE, sep = ",", stringsAsFactors = FALSE)
+```
+
+### I first developed a few derived fields which I thought might be helpful
+
+``` {r}
+
+Baseball$hitsperatbat <- Baseball$hits86/Baseball$atbat86
+Baseball$hrsperatbat <- Baseball$homer86/Baseball$atbat86
+Baseball$rbisperatbat <- Baseball$rbi86/Baseball$atbat86
+Baseball$BA <- Baseball$hits86/Baseball$atbat86
+Baseball$runrbi <- Baseball$rbi86 + Baseball$runs86
+Baseball$OBP <- (Baseball$hits86 + Baseball$walks86) / (Baseball$atbat86 + Baseball$walks86)
+```
+
+I next generated a histogram and boxplots to assess the distribution of salaries in 2007 and the variation of that distribution across positions and teams (at least team as of the prior season.) Most notably, the median salaries for most positions were around the same (~500k) except for RF which was much higher (1MM) and LF and SS which were lower. 1b had the highest overall salary and the largest IQR and 3rd quartile by far.
+
+```{r}
+library(ggplot2)
+
+ggplot(Baseball, aes(x = sal87)) + geom_histogram()
+ggplot(Baseball, aes(y = sal87, x = posit86))+ geom_boxplot(data=subset(Baseball, posit86 %in% c("C", "1B", "2B", "3B", "SS", "RF", "CF","LF","DH")))
+ggplot(Baseball, aes(y = sal87, x = team86)) + geom_boxplot()
+```
+
+I also looked at distributions of some key variables across leagues. There was more power in the AL than the NL (75th quartile was higher as was the max value) but BA, approx OBP and runs all looked relatively similar across leagues.
+
+```{r}
+ggplot(Baseball, aes(y = homer86, x = league86)) + geom_boxplot()
+ggplot(Baseball, aes(y = runs86, x = league86)) + geom_boxplot()
+ggplot(Baseball, aes(y = BA, x = league86)) + geom_boxplot()
+ggplot(Baseball, aes(y = OBP, x = league86)) + geom_boxplot()
+```
+I finally did some side-by-side scatterplots to assess the relationship between a few hitting variables (runs, rbis and a combo) and salary across different positions. As you might expect, overall there was a positive correlation between run production and salary. Line of best fit was steeper for some positions (1B, C) than others (2B, 3B)
+
+I mostly used code from the R for everyone book supplemented with some code on regression lines from Cookbook for R (http://www.cookbook-r.com/Graphs/Scatterplots_(ggplot2)).  Also, thanks to some users on Stack Overflow for pointing out how I could make subsets of variables within a ggplot, though still some room for improvement (since some of the variables are still showing up blank) (http://stackoverflow.com/questions/21306858/ggplot2-how-to-plot-specific-selections-inthe-ggplot-script)
+
+```{r}
+ggplot(Baseball, aes(x = rbi86,y = sal87)) + geom_point(aes(color=posit86)) + facet_wrap(~ posit86)
+ggplot(Baseball, aes(x = runs86,y = sal87)) + geom_point(aes(color=posit86)) + facet_wrap(~ posit86)
+ggplot(Baseball, aes(x = runrbi,y = sal87)) + geom_point(data=subset(Baseball, posit86 %in% c("C", "1B", "2B", "3B", "SS", "RF", "CF","LF","DH"))) + facet_wrap(~ posit86) + geom_smooth()
+```
