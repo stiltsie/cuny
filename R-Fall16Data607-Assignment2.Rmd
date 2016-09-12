@@ -1,0 +1,36 @@
+---
+title: "Data Acquisition and Management (607) Assignment"
+author: "Alex Low"
+date: "September 11, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+In this assignment, we were tasked with creating a SQL database that captured the ratings of popular movies from friends or colleagues.
+
+I started by creating some relational tables in MySQL - one for reviewers, one for movies, and one for movie reviews.  I then decided to try importing it into R using RODBC. Below is the code (user name and password blanked out for security reasons.)
+
+```{r create-simpledfs-sql, eval=FALSE}
+library(RODBC)
+conn <- odbcConnect(dsn="alow-dsn", uid="xxxx", pwd="xxxx")
+reviewerdf <- sqlQuery(conn, "SELECT * FROM Data607_Assignment2.Reviewers")
+moviedf <- sqlQuery(conn, "SELECT * FROM Data607_Assignment2.Pop_Movies")
+reviewdf <- sqlQuery(conn, "SELECT * FROM Data607_Assignment2.PopMovieReviews")
+```
+
+I also tried incorporating another SQL query which joined tables to show movies and reviewers in the same table.  Both seemed to work fine.
+
+```{r create-detaileddfs-sql, eval=FALSE}
+reviewdetaildf <- sqlQuery(conn, "SELECT Data607_Assignment2.Reviewers.Real_Name as Reviewer, Data607_Assignment2.Pop_Movies.Real_Name as Movie, PopMovieReviews.Rating as Rating
+FROM Data607_Assignment2.Reviewers
+LEFT JOIN Data607_Assignment2.PopMovieReviews
+ON Reviewers.Person_ID = PopMovieReviews.Person_ID
+LEFT JOIN Data607_Assignment2.Pop_Movies
+ON Pop_Movies.Movie_ID = PopMovieReviews.Movie_ID
+ORDER BY Data607_Assignment2.Pop_Movies.Real_Name, Data607_Assignment2.Reviewers.Real_Name")
+View(reviewdetaildf)
+
+```
