@@ -1,0 +1,87 @@
+---
+title: "CUNY Class 607 - Weekly Assignment 3"
+author: "Alex Low"
+date: "September 18, 2016"
+output: html_document
+---
+
+#Chapter 8 Problems
+
+Question 3a)
+
+```{r}
+raw.data <-"555-1239Moe Szyslak(636) 555-0113Burns, C. Montgomery555-6542Rev. Timothy Lovejoy555 8904Ned Flanders636-555-3226Simpson, Homer5553642Dr. Julius Hibbert" 
+library(stringr)
+name <- unlist(str_extract_all(raw.data, "[[:alpha:]., ]{2,}"))
+last_name <- str_extract(name, "[[:alpha:]]+, ")
+last_name <- str_replace(last_name, pattern = ",", replacement = "")
+last_name <- str_trim(last_name)
+first_name <- str_extract(name, ", [[:alpha:]. ]+")
+first_name <- str_replace(first_name, pattern = ", ", replacement = "")
+rev_names <- str_replace(name, pattern="[[:alpha:]]+\\, .[[:alpha:]. ]+", replacement = str_c(first_name, last_name, sep=" "))
+rev_names
+```
+
+Question 3b)
+
+There appear to be a few approaches to answering this question. One, you can create a vector with all the forms that a title might take (only 2 for now, but obviously could be many more with a larger file), and then try to detect one of those strings. A second approach could be to try to identify the form that those titles typically take and then try to detect that pattern. There are pros and cons with each approach. I tried a few approaches.
+
+```{r}
+simpsons_titles <- c("Rev.", "Dr.")
+unlist(str_detect(rev_names, "Rev. |Dr. "))
+unlist(str_detect(rev_names, simpsons_titles))
+unlist(str_detect(rev_names, "[:alpha:]{2,3}\\. "))
+```
+
+
+Question 3c)
+
+I was not sure if by second name they meant surname or middle name. I went for middle name in the end.
+
+```{r}
+unlist(str_detect(rev_names, "[simpsons_titles?][[:alpha:]]*\\.[[:blank:]][[:alpha:]]+[[:blank:]][[:alpha:]]+"))
+```
+
+Question 4a)
+
+This expression starts with one or more numbers followed by a $ sign.
+```{r}
+Q4a <- "The bill for 34 people was 5570$"
+str_extract(Q4a, "[0-9]+\\$")
+```
+
+Question 4b)
+
+This expression returns the first word of length between 1 and 4 lower-case letters in the string.
+```{r}
+Q4b <- "This string returns four letter words and the answer should be four."
+str_extract(Q4b, "\\b[a-z]{1,4}\\b")
+```
+
+Question 4c)
+
+This expression can potentially startcan start with 0 or more characters followed by .txt so long as it's at the end of the string.  
+
+```{r}
+Q4c <- "i was looking for a text file called random.txt"
+str_extract(Q4c, ".*?\\.txt$")
+```
+
+Question 4d)
+
+This expression requires 2 digits followed by a / followed by 2 digits followed by a / followed by four digits.
+
+```{r}
+Q4d <- "12/34/5678"
+str_extract(Q4d, "\\d{2}/\\d{2}/\\d{4}")
+```
+
+Question 4e)
+
+This expression requires a < > at the start with any types of characters within the parentheses. Next there is an optional section which call be filled with any type of characters. The next piece of the expression requires </ followed by the first expression that had been within the < >. The final character must be a >.
+
+```{r}
+Q4e <- "<green> blue </green>"
+str_extract(Q4e, "<(.+?)>.+?</\\1>")
+```
+
