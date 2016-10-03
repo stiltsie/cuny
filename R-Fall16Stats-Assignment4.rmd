@@ -1,0 +1,56 @@
+---
+title: "607 Assignment 4"
+author: "Alex Low"
+date: "October 2, 2016"
+output: html_document
+---
+
+For this assignment, we were tasked with tidying up a dataset to perform some analyses comparing two airlines on their performance with regard to timeliness.
+
+STEP 1: I created a CSV file with the data and imported it into R using the read.csv function.
+
+```{r}
+assignment4_raw <- read.csv("C:/Data/Assignment4.csv")
+assignment4_raw
+```
+
+STEP 2: Next I tidied the data using some key "tidy data" principles and the tidyr tools.  First I used the "gather" function in tidyr to convert all the  columns related to individual destinations into rows since destination represented a variable and each of those destinations represented a separate observation.
+
+Next I used the "spread" function in tidyr to convert the "on time" and "delayed" statistics into separate columns.  In my opinion, they represented separate variables for the same observation of interest - an airline's flights to an individual destination. Arguments could presumably be advanced that they could also stay ar rows, but it looked like putting these statistics in the same row would facilitate more rapid analysis of an airline's performance, the end goal of the exercise.
+
+```{r tidy=TRUE}
+library(tidyr)
+assignment4_long <- assignment4_raw %>% gather(Destination,Number,Los.Angeles:Seattle)
+assignment4_long <- assignment4_long %>% spread('X.1',Number)
+colnames(assignment4_long) <- c("Airline","Destination","Number Delayed", "Number On Time")
+assignment4_long
+```
+
+STEP 3: Now that my data set was tidier, I used the mutate function in dplyr to add a few statistics which I thought were helpful in general - the total number of flights for each airline to an individual destination, and the proportion of those flights which were delayed. I later realized I could have avoided adding both variables as their own columns by relying on the "group by"" and "summarise"" functions in dplyr, but it was useful to get some experience with the mutate function.
+
+```{r tidy=TRUE, message=FALSE}
+library(dplyr)
+assignment4_long <- assignment4_long %>% mutate('Total Number of Flights' = `Number Delayed`+ `Number On Time`)
+assignment4_long <- assignment4_long %>% mutate('Proportion Delayed' = round(`Number Delayed` / `Total Number of Flights`, 2))
+assignment4_selectcolumns <- select(assignment4_long,`Airline`,`Destination`,`Total Number of Flights`,`Proportion Delayed`)
+```
+
+STEP 4: I then performed some analyses to compare the two airlines' performance to each other - both specific to each destination and then overall across all destinations - using some of the dplyr commands like summarise and group by (I also experimented with others like arrange, filter and select.)  First I looked at the airlines' performance by destination.
+
+NOTE: I found some very useful code for grouped barplots on Stack Overflow here: http://stackoverflow.com/questions/17721126/simplest-way-to-do-grouped-barplot. Further guidance on that code was here: http://docs.ggplot2.org/0.9.3.1/geom_bar.html
+
+```{r tidy=TRUE}
+assignment4_long %>% group_by(`Destination`,`Airline`) %>% summarise(`Lateness` = round((sum(`Number Delayed`) / sum(`Total Number of Flights`)),3))
+library(ggplot2)
+ggplot(assignment4_long, aes(factor(`Destination`), `Proportion Delayed`, fill = `Airline`)) +  geom_bar(stat="identity", position = "dodge") + scale_fill_brewer(palette = "Set1")
+```
+
+According to these results, across all individual destinations, AM WEST performed worse than ALASKA in terms of  proportion of flights which were delayed. Next I looked at the airlines' aggregate performance.
+
+```{r tidy=TRUE}
+assignment4_airline_comparison <- assignment4_long %>% group_by(`Airline`) %>% summarise(`Airline Lateness` = round(sum(`Number Delayed`) / sum(`Total Number of Flights`),3))
+ggplot(assignment4_airline_comparison, aes(factor(`Airline`), `Airline Lateness`, fill = `Airline`)) +  geom_bar(stat="identity", position = "dodge") + scale_fill_brewer(palette = "Set1")
+```
+
+Unexpectedly, though, as you will see, looking at aggregate performance, ALASKA actually performed worse and had a higher proportion of flights which were delayed. I believe there is name for this paradox (a similar example was the subject of one of our challenge exam questions, and Prof. Andy Catlin has referenced it in class), but I cannot recall it!
+
