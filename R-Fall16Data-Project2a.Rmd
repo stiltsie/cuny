@@ -1,0 +1,67 @@
+---
+title: 'Project 2: Part A - National Spending on Drugs'
+author: "Alex Low"
+date: "October 9, 2016"
+output: html_document
+---
+
+For this study I was looking at drug spending patterns over time using the CMS data set: US National Health Expenditures by Service Type and Funding Source, 1960-2014.  I was interested in exploring the overall patterns of drug spending and how it broke down in categories between insurance and out of pocket.
+
+STEP 1: I downloaded the csv file on to my computer and then imported it using the read.csv function. For further analysis, I selected those rows related to high-level drug spending categories.  I also had to clean up the file a little to ensure the right columns heads were on the data frame.
+```{r tidy=TRUE, message=FALSE}
+project2a_raw <- read.csv("C:/Data/NHE2014.csv", stringsAsFactors = FALSE)
+library(tidyr)
+library(dplyr)
+colnames(project2a_raw) <- as.character(unlist(project2a_raw[1,]))
+project2a_select <- project2a_raw[c(282:310),]
+project2a_highlevel <- project2a_select[c(2,3,14),]
+```
+
+Next I started to tidy the data.  I made the years my rows since they seemed to be observations rather than variables and moved the spending categories to columns as my variables. To simplify my analysis, I reduced my years of observation to every 10th year: 1960, 1970 and on.
+
+```{r tidy=TRUE}
+project2a_highlevel <- project2a_highlevel %>% gather(Year,Number,2:56)
+project2a_highlevel <- project2a_highlevel %>% spread(`Expenditure Amount (Millions)`,Number)
+project2a_highlevel <- project2a_highlevel[c(1,11,21,31,41,51),]
+```
+
+I started trying to develop some derived data elements from the data, but noticed that the data elements were still factors or characters (depending on how I customized the initial csv import command.) After some trial and error I figured out how to clean the data sufficiently to make them into numeric values.  It was complicated by the fact I had not realized that both my column headings and values had some padding in them.
+
+```{r tidy=TRUE}
+colnames(project2a_highlevel) <- c("Year","Health Insurance","Other Third Party","Out of Pocket")
+
+library(stringr)
+
+insurance_col <- c(str_trim(project2a_highlevel$`Health Insurance`))
+insurance_col <- as.numeric(insurance_col, na.rm = TRUE)
+project2a_highlevel$`Health Insurance` <- insurance_col
+
+thirdparty_col <- c(str_trim(project2a_highlevel$`Other Third Party`))
+thirdparty_col <- as.numeric(thirdparty_col, na.rm = TRUE)
+project2a_highlevel$`Other Third Party` <- thirdparty_col
+
+pocket_col <- c(str_trim(project2a_highlevel$`Out of Pocket`))
+pocket_col <- as.numeric(pocket_col, na.rm = TRUE)
+project2a_highlevel$`Out of Pocket` <- pocket_col
+```
+
+Since I was interested in the proportional change in spending across categories of spend, I next developed some derived columns indicating the proportion of the spend by category using the mutate function from dplyr. 
+
+```{r tidy=TRUE}
+project2a_highlevel <- project2a_highlevel %>% mutate(Prop_Insurance = round(`Health Insurance` / (`Health Insurance` + `Other Third Party` + `Out of Pocket`),3))
+project2a_highlevel <- project2a_highlevel %>% mutate(Prop_Third_Party = round(`Other Third Party` / (`Health Insurance` + `Other Third Party` + `Out of Pocket`),3))
+project2a_highlevel <- project2a_highlevel %>% mutate(Prop_OOP = round(`Out of Pocket` / (`Health Insurance` + `Other Third Party` + `Out of Pocket`),3))
+```
+
+I next tidied the data some more by using the gather function again to make them into rows. I suspect this was not necessary but I found it easier for developing the box plots later in the analysis.
+
+```{r tidy=TRUE}
+project2a_highlevel_rev <- project2a_highlevel[,c(1,5:7)]
+project2a_highlevel_rev <- project2a_highlevel_rev %>% gather(Category,Proportion,2:4)
+```
+
+Finally, I developed some stacked boxplots to visualize the change in proportional spending for each category over time.  As you'll see below, there is a very clear trend showing spending on drugs moving from out of pocket - the primary source of spending in 1960 - to insurance coverage - the primary source of spending in 2010.  Note: it will be interesting to do this analysis again in 2020 and beyond. I could see the patterns either continuing - due to the expansion of health insurance - but  perhaps thereafter stagnating or even declining due to new trends in health care shifting more out of pocket costs within insurance plans back to consumers.
+```{r tidy=TRUE}
+library(ggplot2)
+ggplot(project2a_highlevel_rev, aes(factor(`Year`), `Proportion`, fill = `Category`)) +  geom_bar(stat="identity", position = "stack") + scale_fill_brewer(palette = "Set1")
+```

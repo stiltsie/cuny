@@ -1,0 +1,45 @@
+---
+title: 'Project 2: Part B - English Soccer'
+author: "Alex Low"
+date: "October 9, 2016"
+output: html_document
+---
+
+In this analysis I was looking into the variation in the performances by English soccer teams when playing at their home ground and playing away from their home ground.
+```{r tidy=TRUE}
+project2b_raw <- read.csv("C:/Data/EPL.csv")
+library(tidyr)
+library(dplyr)
+```
+First I cleaned up the data frame my removing extraneous content including overall performance, since I was only concerned with comparing home and away performance. If this was the first of several analyses, I likely would have retained the content and just used the filter function. [Late note: for some reason, commands that were working in R earlier did not work when I knitted the document, so I retained all the extraneous columns which seems to have worked.]
+
+```{r tidy=TRUE}
+##content removed
+```
+I next experimented with a few different ways of displaying the data. I attempted to use the gather function to separate team Wins, Draws (Ties) and Losses as individual rows but found that was not useful for the particular analysis that was being requested. Instead I used the mutate function to add a couple of variables to assess home and away performance (goal difference (the ddifference between goals scored and goals allowed) per game played.)  I ordered the columns according to a few metrics of home performance, away performance and the difference between the two.
+
+```{r tidy=TRUE, message=FALSE}
+project2b_rev <- project2b_raw %>% mutate(`home performance` = round((GFh - GAh) / (Wh+Dh+Lh),2))
+project2b_rev <- project2b_rev %>% mutate(`away performance` = round((GFa - GAa) / (Wa+Da+La),2))
+project2b_rev <- project2b_rev %>% mutate(`home/away scoring difference` = `home performance` - `away performance`)
+arrange(project2b_rev,desc(`home performance`))
+arrange(project2b_rev,desc(`away performance`))
+project2b_rev <- arrange(project2b_rev,desc(`home/away scoring difference`))
+```
+
+I next created a bar chart displaying the teams which had the greatest home performance compared to away performance and those which had worst respective performance in that regard.
+
+```{r tidy=TRUE}
+top_teams <- top_n(project2b_rev,5,`home/away scoring difference`)
+bottom_teams <- top_n(project2b_rev,-5,`home/away scoring difference`) 
+
+library(ggplot2)
+ggplot(top_teams, aes(x=`Team`,y=`home/away scoring difference`)) + geom_bar(stat="identity", fill="blue")
+ggplot(bottom_teams, aes(x=`Team`,y=`home/away scoring difference`)) + geom_bar(stat="identity", fill="red")
+```
+
+Finally, I created a summary to show mean home performance compared to mean away performance across all teams. Clearly (and unsurprisingly, teams at home performed better than teams away from home.
+```{r tidy=TRUE}
+summary_2b <- summarise(project2b_rev, `mean home performance` = round(mean(`home performance`),2), `mean away performance` = round(mean(`away performance`),2))
+summary_2b
+```

@@ -1,0 +1,48 @@
+---
+title: 'Project 2: Part C - Changes in US Population Over Time'
+author: "Alex Low"
+date: "October 9, 2016"
+output: html_document
+---
+
+In this analysis, I was investigating changes in US population between 2010 and 2014 using a data set derived from the US census. First I downloaded the csv file and imported it into R using the read.csv function.  I removed some of the extraneous rows and created a new column indicating whether the row of observation was the entire country, a region or a state (or district like D.C.)
+
+```{r tidy=TRUE, message=FALSE}
+project2c_raw <- read.csv("C:/Data/NST-EST2014-01.csv", stringsAsFactors = FALSE)
+library(tidyr)
+library(dplyr)
+project2c_raw <- project2c_raw[-c(57,59:63),]
+
+state_repeat <- rep("State",52)
+project2c_raw$Territory <- c("Nation","Region","Region","Region","Region",state_repeat)
+```
+I kept trying to convert the factors and/or characters (depending on the commands I use in the read.csv function) to numeric. I eventually realized there must be some extra spaces in the field which weren't immediate obvious to the eye so I used the str_trim function to remove them.
+
+```{r tidy=TRUE}
+library(stringr)
+x2010col <- c(str_trim(project2c_raw$X2010))
+x2010col <- as.numeric(x2010col, na.rm = TRUE)
+project2c_raw$X2010 <- x2010col
+x2014col <- c(str_trim(project2c_raw$X2014))
+x2014col <- as.numeric(x2014col, na.rm = TRUE)
+project2c_raw$X2014 <- x2014col
+```
+
+I then performed some analysis for each unit of territory - state and region - to note the states and regions with the largest population change between 2010 and 2014. 
+```{r tidy=TRUE}
+project2c_rev <- project2c_raw %>% mutate(`PopChange` = X2014 - X2010)
+project2c_rev <- project2c_rev %>% mutate(`PercentChange` = `PopChange` / X2010)
+
+state_analysis <- filter(project2c_rev, project2c_rev$Territory == "State")
+arrange(state_analysis,desc(`PercentChange`))
+
+
+region_analysis <- filter(project2c_rev, project2c_rev$Territory == "Region")
+arrange(region_analysis,desc(`PercentChange`))
+```
+Finally, I looked at overall average population change across nation, region and state. It was a quality check because obviously these figures should be the same. It turned out they weren't equal but that might be because I included Puerto Rico as a "state."
+
+```{r tidy=TRUE}
+project2c_rev %>% group_by(`Territory`) %>% summarise(`Mean Percent Change` = (sum(`PopChange`) / sum(`X2010`)))
+```
+
