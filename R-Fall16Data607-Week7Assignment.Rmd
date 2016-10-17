@@ -1,0 +1,90 @@
+---
+title: "607 Week 7 Assignment"
+author: "Alex Low"
+date: "October 16, 2016"
+output: html_document
+---
+
+In this assignment we were demonstrating how to create xml, html and json files documenting three of our favorite books on a specific topic, and then import that data into separate R data frames. I decided to document three of my favorite cookbooks in each of those formats.
+
+(Note: I tried posting the files online in a few locations, but each time failed to import it correctly as part of the RMD file so unfortunately the code just represents importing the files from my computer.)
+
+###XML Files
+
+First I created an xml file. I used the XML package to do the inital work of parsing the data and identifying its root. I then extracted each line (each favorite book) before combining them in a data frame using the rbind function. I tried to also remove the "" marks, but ran out of time. I used the "separate" function to separate multiple authors into different columns - R seemed to only grudgingly accept it, giving me error messages but it seemed to work.
+```{r tidy=TRUE, message=FALSE}
+
+library(XML)
+books_xml <- xmlParse(file="C:/Data/books.xml")
+xml_root <- xmlRoot(books_xml)
+authors_line1 <- c(xmlSApply(xml_root[[1]], xmlValue))
+authors_line2 <- c(xmlSApply(xml_root[[2]], xmlValue))
+authors_line3 <- c(xmlSApply(xml_root[[3]], xmlValue))
+
+library(stringr)
+library(tidyr)
+
+authors_xml_df <- data.frame(rbind(authors_line1,authors_line2,authors_line3))
+authors_xml_df <- separate(authors_xml_df,author,c("author1","author2"),",")
+
+authors_xml_df$rank <- as.numeric(authors_xml_df$rank)
+authors_xml_df$year <- as.numeric(authors_xml_df$year)
+authors_xml_df$title <- as.character(authors_xml_df$title)
+authors_xml_df$author1 <- as.character(authors_xml_df$author1)
+authors_xml_df$author2 <- as.character(authors_xml_df$author2)
+authors_xml_df$genre <- as.character(authors_xml_df$genre)
+
+authors_xml_df
+```
+
+###HTML Files
+
+I next tried my luck with html files.  Again, I used the XML package and used some basic commands to read the HTML table.  
+
+```{r tidy=TRUE, message=FALSE}
+library(XML)
+library(RCurl)
+
+authors_html <- htmlParse("C:/Data/books.html")
+authors_html_df <- data.frame(readHTMLTable(authors_html,stringsAsFactors = FALSE))
+colnames(authors_html_df) <- c("rank","title","author1","author2","genre","year")
+
+authors_html_df$rank <- as.numeric(authors_html_df$rank)
+authors_html_df$year <- as.numeric(authors_html_df$year)
+
+authors_html_df
+```
+
+###JSON Files
+
+Perhaps owing to the approach I took this exercise frustrated me the most. My approach was to create individual columns for each variable and then recombine them. This was fine for the variables where there was only one value per book, but more complex for the variables where the values varied across books (ie authors.) 
+
+```{r tidy=TRUE, message=FALSE}
+
+library(RJSONIO)
+library(jsonlite)
+library(stringr)
+
+test.json <- fromJSON("C:/Data/books.json")
+
+authors_vec <- unlist(test.json,recursive = TRUE, use.names = TRUE)
+authors_title_json <- authors_vec[str_detect(names(authors_vec), "title")]
+authors_rank_json <- authors_vec[str_detect(names(authors_vec), "rank")]
+authors_genre_json <- authors_vec[str_detect(names(authors_vec), "genre")]
+authors_year_json <- authors_vec[str_detect(names(authors_vec), "year")]
+authors_json <- as.vector(test.json$`Favorite Books`$authors)
+authors_df <- data.frame(cbind(authors_rank_json,authors_title_json,authors_json,authors_genre_json,authors_year_json))
+```
+I had all sorts of problems separating multiple authors into more than one row. I used the "separate" function (I initially tried str_split from stringr but that replicated the author when there was only one.) Again, R seemed to allow this command grudgingly (my first attempts to knit the file failed because of it.)
+
+The only problem was that using the separate function resulted in a lot of additional characters, so I then had to start cleaning it up using the gsub function. Again, I failed to remove the "" from the data frame.
+
+```{r tidy=TRUE, message=FALSE}
+authors_df <- separate(authors_df,authors_json,c("author1","author2"),sep=",")
+
+authors_df$author1 <- sapply(authors_df$author1,function(x) gsub("c\\(","",x))
+authors_df$author2 <- sapply(authors_df$author2,function(x) gsub("\\)","",x))
+
+colnames(authors_df) <- c("rank","title","author1","author2","genre","year")
+authors_df
+```
