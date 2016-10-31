@@ -1,0 +1,29 @@
+---
+title: "Data 607 - Week 9 Assignment"
+author: "Alex Low"
+date: "October 30, 2016"
+output: html_document
+---
+
+For this assignment, our task was to choose one of the New York Times APIs, construct an interface in R to read in the JSON data, and transform it to an R dataframe. I selected an API to an article search on the NYT website.
+
+
+```{r}
+library(stringr)
+library(RJSONIO)
+library(RCurl)
+nyt_json <- fromJSON(getURL(url = "https://api.nytimes.com/svc/search/v2/articlesearch.json?api_key=922e2eee28114fb0a30f5c4fa88d67b"))
+nyt_vec <- unlist(nyt_json, recursive = TRUE, use.names = TRUE)
+snippet <- c(nyt_vec[str_detect(names(nyt_vec), "snippet")])
+headline <- c(nyt_vec[str_detect(names(nyt_vec), "headline.main")])
+web_url <- nyt_vec[str_detect(names(nyt_vec), "web_url")]
+section_name <- nyt_vec[str_detect(names(nyt_vec), "section_name")]
+pub_date <- nyt_vec[str_detect(names(nyt_vec), "pub_date")]
+pub_date <- str_extract(pub_date, ".{10}")
+nyt_matrix <- cbind(headline,snippet,web_url,section_name,pub_date)
+nyt_df <- as.data.frame(nyt_matrix, row.names = (1:10))
+nyt_df
+```
+
+
+
