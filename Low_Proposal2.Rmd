@@ -1,0 +1,83 @@
+```{r include=FALSE, cache=FALSE}
+# DO NOT REMOVE
+# THIS IS FOR SETTING SOME PLOTTING PARAMETERS SO THAT YOUR PLOTS DON'T TAKE UP TOO MUCH SPACE
+# IF YOU WOULD LIKE TO CHANGE THESE, SEE HELP FILES ON THE par() FUNCTION
+# OR ASK FOR HELP
+library(knitr)
+## set global chunk options
+opts_chunk$set(fig.path='figure/manual-', cache.path='cache/manual-', fig.align='center', fig.show='hold', par=TRUE)
+## tune details of base graphics (http://yihui.name/knitr/hooks)
+knit_hooks$set(par=function(before, options, envir){
+if (before && options$fig.show!='none') par(mar=c(4,4,.2,.1),cex.lab=.95,cex.axis=.9,mgp=c(2,.7,0),tcl=-.3)
+})
+```
+
+```{r message=FALSE}
+# load data
+library(dplyr)
+hhc_hosp_data <- read.csv("C:/Data/Hospital_Inpatient_Discharges__SPARCS_De-Identified___2012-HHC.csv")
+hhc_hosp_mcd <- filter(hhc_hosp_data,Payment.Typology.1 == "Medicaid")
+dim(hhc_hosp_mcd)
+
+all_hosp_data <- read.csv("C:/Data/Hospital_Inpatient_Discharges__SPARCS_De-Identified___2012-All_NYC.csv")
+hhc_hospitals <- c("Bellevue Hospital Center", "Coney Island Hospital", "Elmhurst Hospital Center", "Harlem Hospital Center", "Jacobi Medical Center", "Kings County Hospital Center", "Lincoln Medical & Mental Health Center","Metropolitan Hospital Center","North Central Bronx Hospital","Queens Hospital Center","Woodhull Medical & Mental Health Center")
+private_hosp_data <- filter(all_hosp_data, !Facility.Name %in% hhc_hospitals)
+private_hosp_mcd <- filter(private_hosp_data,Payment.Typology.1 == "Medicaid")
+dim(private_hosp_mcd)
+```
+
+### Research question 
+
+Are HHC (ie public) hospitals associated with different lengths of stay than other (private) NYC hospitals? 
+
+### Cases 
+
+**What are the cases, and how many are there?**
+
+I will collect samples from hospital admissions to public (HHC) and private NYC hospitals in 2012.  Since HHC hospitals typically treat poorer, more disadvantaged populations, I will likely limit it to hospital admissions for Medicaid beneficiaries, so I can compare somewhat like populations between the two samples. In total, there were 330,617 admissions to private hospitals, and 117,830 admissions to public hospitals for Medicaid beneficiaries.
+
+A few variations I might attempt.  First, I might also try to take samples from different years, not just from 2012.  Secondly, I might test some sensitivity analyses on specific types of admission (e.g. elective vs urgent, specific type of diagnoses) to see if there is any variation based on those factors.
+
+### Data collection 
+
+**Describe the method of data collection.**
+
+Since 1979, hospitals in New York State have been required to report administrative data on all their inpatient discharges (later expanded to include outpatient visits) to New York State. The resulting data set - Statewide Planning and Research Cooperative System (SPARCS) is used for various purposes including research, quality measurement, and other analyses. 
+
+### Type of study 
+
+**What type of study is this (observational/experiment)?**
+
+This is an observational study.
+
+### Data Source 
+
+I sourced the data from New York State's Statewide Planning and Research Cooperative System (SPARCS) Inpatient De-identified dataset which contains discharge level detail on patient characteristics, diagnoses and treatments, services, and charges for each hospital inpatient stay in New York State. The data is publicly available here: [https://health.data.ny.gov/Health/Hospital-Inpatient-Discharges-SPARCS-De-Identified/u4ud-w55t]
+
+### Response 
+
+**What is the response variable, and what type is it (numerical/categorical)?**
+
+Response variable is length of stay. The variable is numerical.
+
+### Explanatory 
+
+**What is the explanatory variable, and what type is it (numerical/categorival)?**
+
+The explanatory variables is category of hospital (public vs pirate.)  These variables are categorical.
+
+### Relevant summary statistics 
+
+```{r}
+hhc_hosp_data$Length.of.Stay <- as.numeric(hhc_hosp_data$Length.of.Stay)
+hhc_hosp_mcd$Length.of.Stay <- as.numeric(hhc_hosp_mcd$Length.of.Stay)
+summary(hhc_hosp_data$Length.of.Stay)
+summary(hhc_hosp_mcd$Length.of.Stay)
+
+private_hosp_data$Length.of.Stay <- as.numeric(private_hosp_data$Length.of.Stay)
+private_hosp_mcd$Length.of.Stay <- as.numeric(private_hosp_mcd$Length.of.Stay)
+summary(private_hosp_data$Length.of.Stay)
+summary(private_hosp_mcd$Length.of.Stay)
+```
+
+Note: There is a right skew to the data. I might exclude extremely high values from the analysis as they might skew the analysis.
