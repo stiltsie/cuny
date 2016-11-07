@@ -1,0 +1,146 @@
+---
+title: "CUNY Class 607 - Week 10 Assignment"
+author: "Alex Low"
+date: "November 6, 2016"
+output: html_document
+---
+
+### **OVERVIEW**  
+
+In this assignment we were tasked with classifying new "test" documents using already classified "training" documents. Specifically, we were asked to use pre-classified spam/ham datasets to predict whether or not a new document is spam. 
+
+### **STEP 1**  
+
+I downloaded spam and ham email data sets available from (https://spamassassin.apache.org/publiccorpus/). In particular, I used an "easy ham" and "spam" data sets labeled with the date "20021010." In all there were 2,551 ham messages and 501 spam messages.
+
+I tried several methods to extract certain sections of the emails (e.g. body, subject) but none proved very successful.  Instead, I extracted the entire text as separate files into a single corpus each for ham and spam and then added meta data to each set of files designating whether it was ham or spam.
+
+I next conducted several steps using the tm package to clean and prepare the data sets per those suggested in Chapter 10 of the "Automated Data Collection with R" text book (ISBN: 978-1-118-83481-7)
+
+```{r, warning=FALSE, message=FALSE}
+
+library(stringr)
+library(XML)
+library(SnowballC)
+library(tm)
+library(RTextTools)
+
+##Steps to prepare ham data.
+all_ham_files <- list.files("C:/Data/SpamHam/Ham")
+hammy_corpus <- Corpus(VectorSource(all_ham_files)) 
+hammy_corpus <- tm_map(hammy_corpus,removeNumbers)
+hammy_corpus <- tm_map(hammy_corpus,str_replace_all, pattern = "[[punct]]", replacement = " ")
+hammy_corpus <- tm_map(hammy_corpus,removeWords, words=stopwords("en"))
+hammy_corpus <- tm_map(hammy_corpus,tolower)
+hammy_corpus <- tm_map(hammy_corpus,stemDocument)
+meta(hammy_corpus, "category") <- "ham"
+hammy_corpus <- tm_map(hammy_corpus, PlainTextDocument)
+tdm_ham <- TermDocumentMatrix(hammy_corpus)
+```
+
+```{r}
+##Steps to prepare spam data.
+all_spam_files <- list.files("C:/Data/SpamHam/Spam")
+spammy_corpus <- Corpus(VectorSource(all_spam_files)) 
+spammy_corpus <- tm_map(spammy_corpus,removeNumbers)
+spammy_corpus <- tm_map(spammy_corpus,str_replace_all, pattern = "[[punct]]", replacement = " ")
+spammy_corpus <- tm_map(spammy_corpus,removeWords, words=stopwords("en"))
+spammy_corpus <- tm_map(spammy_corpus,tolower)
+spammy_corpus <- tm_map(spammy_corpus,stemDocument)
+meta(spammy_corpus, "category") <- "spam"
+spammy_corpus <- tm_map(spammy_corpus, PlainTextDocument)
+tdm_spam <- TermDocumentMatrix(spammy_corpus)
+```
+
+### **STEP 2**  
+
+Next I combined the spam corpus and ham corpus into a single corpus and created a Document Term Matrix from that corpus. I ran a query to remove sparse terms (terms that appeared in 10 documents or less) from the Document Term Matrix which proved helpful in fine-tuning the analyses I completed in the next section. This resulted in only 25 terms of which the maximal term length was 3 - which suggests the terms were very unique and not widely spread across documents. Even once I'd removed the sparse terms, overall sparsity was still 100%.
+
+```{r}
+all_corpus <- c(spammy_corpus,hammy_corpus)
+category_labels <- unlist(meta(all_corpus,"category"))
+dtm_all <- DocumentTermMatrix(all_corpus)
+dtm_all
+dtm_all <- removeSparseTerms(dtm_all, 1-(10/length(all_corpus)))
+dtm_all
+```
+
+### **STEP 3**    
+
+I created models to take a training set of documents to estimate the membership of the remaining documents. My first set of models used a training size of 2,000 documents and test size of 1,052 documents. I used the same three models as in the text book: support vector machine (SVM), random forest (tree), and maximum entropy (maxent).
+
+```{r}
+N <- length(category_labels)
+container <- create_container(dtm_all, labels = category_labels, trainSize = 1:2000,testSize = 2001:N, virgin = FALSE)
+svm_model <- train_model(container, "SVM")
+tree_model <- train_model(container, "TREE")
+maxent_model <- train_model(container, "MAXENT")
+
+svm_out <- classify_model(container, svm_model)
+tree_out <- classify_model(container, tree_model)
+maxent_out <- classify_model(container, maxent_model)
+```
+
+### **STEP 4**  
+
+Again, leveraging the same set of code as was provided in the text book, I assessed the success of the models. The models seemed to work almost too well, making me wonder if I'd made an elementary mistake (looking forward to hearing if that's the case) or whether the models were too basic. The SVM and Tree methods were both 100% successful, and the Maxent method was 99% successful. (Note that I also tried the models before I removed the sparse terms, and the Maxent method was only successfuly 91% of the time, proving the value - at least in this example - of that step.)
+
+```{r}
+labels_out <- data.frame(
+  correct_label = category_labels[2001:N],
+  svm = as.character(svm_out[,1]),
+  tree = as.character(tree_out[,1]),
+  maxent = as.character(maxent_out[,1]),
+  stringsAsFactors = F)
+```
+
+### **STEP 5**  
+
+I was curious about the success of the models if I changed the sample sizes of the training set of documents and test set of documents.  So I reduced the sizes of the training set to 1,000 documents and test set to 2,052 documents.  Unsurprisingly, the performance declined in each model though was still strong within a couple of models. SVM and Maxent were both correct for 96% of the documents. The Tree method was entirely incorrect making me realize that I must have made a basic mistake with the code.
+
+```{r}
+table(labels_out[,1] == labels_out[,2])
+prop.table(table(labels_out[,1] == labels_out[,2]))
+
+table(labels_out[,1] == labels_out[,3])
+prop.table(table(labels_out[,1] == labels_out[,3]))
+
+table(labels_out[,1] == labels_out[,4])
+prop.table(table(labels_out[,1] == labels_out[,4]))
+
+```
+
+```{r}
+N <- length(category_labels)
+container2 <- create_container(dtm_all, labels = category_labels, trainSize = 1:1000,testSize = 1001:N, virgin = FALSE)
+svm_model2 <- train_model(container2, "SVM")
+tree_model2 <- train_model(container2, "TREE")
+maxent_model2 <- train_model(container2, "MAXENT")
+
+svm_out2 <- classify_model(container2, svm_model2)
+tree_out2 <- classify_model(container2, tree_model2)
+maxent_out2 <- classify_model(container2, maxent_model2)
+```
+
+```{r}
+labels_out2 <- data.frame(
+  correct_label2 = category_labels[1001:N],
+  svm2 = as.character(svm_out2[,1]),
+  tree2 = as.character(tree_out2[,1]),
+  maxent2 = as.character(maxent_out2[,1]),
+  stringsAsFactors = F)
+```
+
+```{r}
+table(labels_out2[,1] == labels_out2[,2])
+prop.table(table(labels_out2[,1] == labels_out2[,2]))
+
+table(labels_out2[,1] == labels_out2[,3])
+prop.table(table(labels_out2[,1] == labels_out2[,3]))
+
+table(labels_out2[,1] == labels_out2[,4])
+prop.table(table(labels_out2[,1] == labels_out2[,4]))
+
+```
+
+
