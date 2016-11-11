@@ -1,0 +1,28 @@
+---
+title: "CUNY Class 607 - Week 11 Discussion"
+author: "Alex Low"
+date: "November 10, 2016"
+output: html_document
+---
+
+### **Overview**  
+
+Allrecipes.com is a website where users can share their favorite recipes with one another.  It is one of my favorite sites for finding new recipes for all sorts of cuisines and types of meal.
+
+### **Scenario Design**  
+
+Who are your target Users? Target users are every day people who like to do their own cooking and make their own meals.
+
+What are their key goals? The users' key goals are to readily find new recipes for suitable meals that they can cook at home.
+
+How can you help them accomplish those goals? The site can help them accomoplish those goals by making it easy for users to find suitable recipes catered to their preferences.
+
+### **Reverse Engineering**  
+
+Allrecipes.com includes a section on its website called "Recommended for you."  The recommendations section seems to be relatively basic. As best I can tell, the recommendations are based on some mix of my taste preferences (there is a page which captures v. basic info about my preferences, e.g. non-meat as I'm a vegetarian), users' ratings of the recipes, and the season (e.g. there are some Thanksgiving recipes.)
+
+### **Specific Recommendations**    
+
+I am surprised that a major site like this one does not have a more sophisticated way of delivering recommendations. The site could easily leverage more information via my activity on the site (not just my taste preferences) to inform that section in a more meaningful way - including my favorite recipes, my search patterns and my page visits.  At the moment, the recipes do not seem to bare much resemblance to the information it might have gleaned from these sources.
+
+For example, I save all my favorite recipes so that I can easily access them on the site and through its app. A basic algorithm could recognize various patterns to my favorite recipes - including my favorites types of meals, cuisines, and ingredients.  It does not even seem to fully use the "taste preferences" section very well since meat-y recipes still show up among my recommendations.
