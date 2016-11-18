@@ -1,0 +1,61 @@
+---
+title: "CUNY Data 607 Project 4"
+author: "Alex Low"
+date: "November 17, 2016"
+output: html_document
+---
+
+### **Overview**  
+
+In this assignment, we were tasked with migrating data from a relational database into a NoSQL database of our choosing.  I elected to try migrating data from the "Flights" database into Neo4j, a graphical database. 
+
+#### **Step 1**  
+
+I installed Neo4j and used the package "RNeo4j" to work with that program within R.  I first tried importing the Airlines data set using a loop to capture the key variables as nodes within Neo4j. I also used the Cypher tool to do a basic query and make sure the airlines were available for query.
+
+```{r}
+library(RNeo4j)
+
+graph = startGraph("http://localhost:7474/db/data/", username = "neo4j", password = "modrock")
+clear(graph, input= FALSE)
+
+airlines <- read.csv("C:/Data/flights/airlines.csv")
+flights <- read.csv("C:/Data/flights/flights.csv")
+
+addConstraint(graph, "Airline", "carrier")
+addConstraint(graph, "Airline", "name")
+
+for (i in 1:nrow(airlines)) {
+  getOrCreateNode(graph, "Airline", carrier = as.character(airlines[i, ]$carrier), name = as.character(airlines[i, ]$name))
+}
+
+cypher(graph, "MATCH (a:Airline) RETURN a.name")
+```
+
+
+#### **Step 2**  
+
+I next tried importing a subset of the Flights database, again using a similar loop as above. The main issue I encountered is that the query did not work with the full data set, so I had to use a sample of 200 rows.  I also tried doing a slightly more complex query and it seems to have worked.
+
+```{r}
+rev_flights <- flights[1:200,]
+
+addConstraint(graph, "Flight", "arr_time")
+addConstraint(graph, "Flight", "dep_time")
+addConstraint(graph, "Flight", "arr_delay")
+addConstraint(graph, "Flight", "dep_delay")
+addConstraint(graph, "Flight", "flight_num")
+
+for (i in 1:nrow(rev_flights)) {
+  getOrCreateNode(graph, "Flight", arr_time = rev_flights[i, ]$arr_time, arr_delay = as.numeric(rev_flights[i, ]$arr_delay), dep_time = rev_flights[i, ]$dep_time, dep_delay = rev_flights[i, ]$dep_delay, flight_num = rev_flights[i, ]$flight)
+}
+
+cypher(graph, "MATCH (a:Flight) WHERE a.arr_delay > 50 RETURN a.flight_num")
+```
+
+#### **Comparing Neo4j to SQL**  
+
+I found it very interesting starting to understand Neo4j, and quite frankly I only scratched the surface. In general, it looked like Neo4j was a lot more agile at describing relationships between variables. It seems like a very useful tool for things like decision trees or complex relationships across variables, especially when using categorical variables. I could see how people would prefer this model than implementing complex joins within SQL. That said, for analyses within an individual data table, or with categorical variables, I would generally prefer SQL from what I've seen so far of Neo4j. It just seems a little more intuitive for me for those types of analyses. That said, it is hard to give a sophisticated analysis based on 1 week of experience!
+
+
+
