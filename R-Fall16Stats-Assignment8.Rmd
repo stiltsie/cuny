@@ -1,0 +1,62 @@
+---
+title: "CUNY Stats 606 Assignment 8"
+author: "Alex Low"
+date: "December 4, 2016"
+output: html_document
+---
+
+8.2
+
+a) Birth weight = 120.07 - 1.93*parity
+
+b) There is negative relationship between a baby's birth weight and being a non-first born kid. If the baby is not first born, the typical baby will be 1.93  ounces lighter than a baby who is a first born. 
+
+Predicted birth weight of babies who are not the first born: 120.07 - 1.93 * 1= 118.14 ounces   
+Predicted birth weight of babies who are the first born: 120.07- 1.93 * 0 = 120.07 ounces  
+ 
+c) The p value is high so no there is not a statistically significant relationship between the average birth weight and parity.
+
+8.4
+
+a) Avg no of days absent = 18.93 - (1.93*eth) + (3.10*sex) + (2.15*lrn)
+
+b) Being non-aboriginal, being female and being an average learner are all associated with lower no of absentee days.
+
+c) Expected no of days: 18.93 + 3.1 + 2.15 = 24.18
+Actual value: 2
+
+Residual = - 22.18
+
+d) R squared: 1 - (240.57/264.17) = 0.089
+
+Adjusted R squared: 0.089*(145/142) = 0.091
+
+8.8
+
+We should remove the learner status variable status first since the adjusted R squared value increases if it is removed.
+
+8.16
+
+a) In general, the higher the temperature, the lower the number of damaged O-rings.
+
+b)
+- The intercept means that when the explanatory variable equals 0 this is the expected value of the number of damaged O-rings.
+- For every increase in 1 degree in the temperature, there is a decrease in 0.2162 in the number of damaged O-rings. The 2nd column gives us the standard error of the intercept and coefficients. The 3rd column gives us the z value for the null hypothesis that there is no relationship between temperature and damaged O-rings. The final column is the p-value for the null hypothesis - in this case very low, indicating a statistically significant relationship.
+ 
+c) No of damaged O-rings = 11.663 - 0.2162 * temperature
+
+d) Yes, concerns about the relationship between ambient temperature and damaged O-rings are clearly justified. This model suggests there is a statistically significant relationship between the two.
+
+8.18
+
+a) log(p/1-p) = 11.6630 - (0.2162 * 51)  = 0.6368
+
+exp(0.6368)/(1+exp(0.6368) = 0.654
+
+log(p/1-p) = 11.6630 - 0.2162 * 53 = 0.2044
+
+exp(0.2044)/(1+exp(0.2044) = 0.551
+
+log(p/1-p) = 11.6630 - 0.2162 * 55 = -0.228
+
+exp(0.6368)/(1+exp(0.6368) = 0.443
