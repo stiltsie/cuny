@@ -1,0 +1,231 @@
+```{r include=FALSE, cache=FALSE}
+# DO NOT REMOVE
+# THIS IS FOR SETTING SOME PLOTTING PARAMETERS SO THAT YOUR PLOTS DON'T TAKE UP TOO MUCH SPACE
+# IF YOU WOULD LIKE TO CHANGE THESE, SEE HELP FILES ON THE par() FUNCTION
+# OR ASK FOR HELP
+library(knitr)
+## set global chunk options
+opts_chunk$set(fig.path='figure/manual-', cache.path='cache/manual-', fig.align='center', fig.show='hold', par=TRUE)
+## tune details of base graphics (http://yihui.name/knitr/hooks)
+knit_hooks$set(par=function(before, options, envir){
+if (before && options$fig.show!='none') par(mar=c(4,4,.2,.1),cex.lab=.95,cex.axis=.9,mgp=c(2,.7,0),tcl=-.3)
+})
+```
+
+```{r echo=FALSE}
+# load data
+
+```
+
+### Part 1 - Introduction:
+In this project, I was interested in assessing the comparative lengths of stay between public and private hospitals in New York City.  Public hospitals are part of the Health and Hospitals Corporation, which, compared to private hospitals, tends to provide care for poorer, underserved communities of New York, including large numbers of people with public insurance (e.g., Medicaid) or no insurance. In recent decades, there has been pressure on hospitals to reduce length of stay, both to use resources efficiently, and because longer lengths of stay might actually be associated with worse quality of care.
+
+My principal research question was: are HHC (ie public) hospitals associated with different lengths of stay than other (private) NYC hospitals? I decided to conduct a 2-tail hypothesis test at 99% confidence level to assess whether there was any difference in either direction.  Since hospitals tend to treat different populations, I decided to do a few variations of the test to try to control for some differences.  In addition to conducting hypotheis test on all admissions, I decided to conduct some sensitivity analyses on specific types of admission - including admissions for Medicaid patients, emergency admissions, and admissions for specific levels of severity.  I elected to use T-tests to compare two means (ie those for public and private hospitals.)
+
+### Part 2 - Data:
+
+**Data Collection:**To compare lengths of stay, I collected hospital admissions / discharge data to public (HHC) and private NYC hospitals, using publicly available data from New York State.  Since 1979, hospitals in New York State have been required to report administrative data on all their inpatient discharges. The resulting data set - Statewide Planning and Research Cooperative System (SPARCS) is used for various purposes including research, quality measurement, and other analyses. 
+
+**Cases:** My cases are all publicly reported hospital admissions to public (HHC) and private NYC hospitals in 2012.
+
+**Variables:** I looked at the difference in length of stay (numerical) between the two groups of hospitals (public/private - categorical) - for all admissions, admissions for Medicaid patients, emergency admissions, and admissions for specific levels of severity.
+
+**Type of study:** This is an observational study. I was not able to meet the conditions for experimental studies (e.g. randomizing subjects to intervention and control group, prospectively controlling differences between the two groups.)  Instead I was re-using data collected for another purpose, thus making it an observational study.  As you will see below, I did try to conduct some tests to control for differences in patient mix.
+
+**Scope of inference:** Since I am conducting the study on a complete set of admissions for the year of 2012, I feel comfortable generalizing findings from this study. That said, these observations are all from a single calendar year, so an argument could be made that I am only able to generalize for specific period of time.
+
+**Causality:** Since my study does not meet the conditions for an experiment, I cannot assess causality. I can assess statistically significant differences between the groups of interest, but not causality.
+
+### Part 3 - Exploratory data analysis:
+
+```{r}
+# load data
+library(dplyr)
+
+all_hosp_data <- read.csv("C:/Data/Hospital_Inpatient_Discharges__SPARCS_De-Identified___2012-All_NYC.csv")
+hhc_hospitals <- c("Bellevue Hospital Center", "Coney Island Hospital", "Elmhurst Hospital Center", "Harlem Hospital Center", "Jacobi Medical Center", "Kings County Hospital Center", "Lincoln Medical & Mental Health Center","Metropolitan Hospital Center","North Central Bronx Hospital","Queens Hospital Center","Woodhull Medical & Mental Health Center")
+all_hosp_data$Length.of.Stay <- as.numeric(all_hosp_data$Length.of.Stay)
+
+hhc_hosp_data <- filter(all_hosp_data, Facility.Name %in% hhc_hospitals)
+private_hosp_data <- filter(all_hosp_data, !Facility.Name %in% hhc_hospitals)
+
+hist(all_hosp_data$Length.of.Stay)
+hist(hhc_hosp_data$Length.of.Stay)
+hist(private_hosp_data$Length.of.Stay)
+
+qqnorm(all_hosp_data$Length.of.Stay)
+qqline(all_hosp_data$Length.of.Stay)
+```
+
+The histograms and QQ plots appear to show a non-normal distribution. That said, since the sample size is so large, we can relax the requirement for T-tests that the underlying distribution is normal.
+
+### Part 4 - Inference:
+
+#### 4A: All hospital admissions  
+```{r}
+
+summary(hhc_hosp_data$Length.of.Stay)
+summary(private_hosp_data$Length.of.Stay)
+
+sd(hhc_hosp_data$Length.of.Stay)
+sd(private_hosp_data$Length.of.Stay)
+
+#Calculating standard error
+
+sqrt((sd(hhc_hosp_data$Length.of.Stay)^2)/201302 + (sd(private_hosp_data$Length.of.Stay)^2)/997592)
+
+###Standard error equals 0.067
+
+##T-score
+(mean(private_hosp_data$Length.of.Stay) - mean(hhc_hosp_data$Length.of.Stay))/0.067
+```
+
+**T-score is 39.  Looking at the T-probability table this is much higher than the T-score for a 99% confidence interval (500+ degrees of freedom  - 2.58/2.59.) This means the 2-sided p score is much lower than the significance level of 0.01.  Thus we reject the null hypothesis and conclude that there is a statistically significant difference in means between HHC and private hospitals.**  
+
+#### 4B: Hospital admissions for Medicaid patients  
+```{r}
+
+hhc_hosp_mcd <- filter(hhc_hosp_data,Payment.Typology.1 == "Medicaid")
+private_hosp_mcd <- filter(private_hosp_data,Payment.Typology.1 == "Medicaid")
+
+summary(hhc_hosp_mcd$Length.of.Stay)
+summary(private_hosp_mcd$Length.of.Stay)
+
+sd(hhc_hosp_mcd$Length.of.Stay)
+sd(private_hosp_mcd$Length.of.Stay)
+
+### Standard error calculation
+
+sqrt((sd(hhc_hosp_mcd$Length.of.Stay)^2)/117830 + (sd(private_hosp_mcd$Length.of.Stay)^2)/330617)
+
+###Standard error equals 0.086
+
+##T-score
+(mean(private_hosp_mcd$Length.of.Stay)-mean(hhc_hosp_mcd$Length.of.Stay))/0.086
+
+```
+**The T-score is 16, meaning that again the p score is much lower than 0.01.  Again we reject the null hypothesis and conclude that there is a statistically significant difference in means.**  
+
+#### 4C: Hospital admissions for emergency cases  
+```{r}
+
+emergency <- filter(all_hosp_data, Type.of.Admission == "Emergency")
+hhc_hosp_emerg <- filter(emergency, Facility.Name %in% hhc_hospitals)
+private_hosp_emerg <- filter(emergency, !Facility.Name %in% hhc_hospitals)
+
+summary(hhc_hosp_emerg$Length.of.Stay)
+summary(private_hosp_emerg$Length.of.Stay)
+
+sd(hhc_hosp_emerg$Length.of.Stay)
+sd(hhc_hosp_emerg$Length.of.Stay)
+
+### Standard error calculation
+
+sqrt((sd(hhc_hosp_emerg$Length.of.Stay)^2)/175324 + (sd(private_hosp_emerg$Length.of.Stay)^2)/622898)
+
+###Standard error equals 0.077
+
+##T-score
+(mean(private_hosp_emerg$Length.of.Stay - mean(hhc_hosp_emerg$Length.of.Stay)))/0.077
+
+```
+**The T-score is 55.  Again we reject the null hypothesis and conclude that there is a statistically significant difference in means.**  
+
+#### 4D: Hospital admissions with high lengths of stay removed  
+```{r}
+remove_skew <- filter(all_hosp_data, Length.of.Stay < 90)
+hhc_hosp_rev <- filter(remove_skew, Facility.Name %in% hhc_hospitals)
+private_hosp_rev <- filter(remove_skew, !Facility.Name %in% hhc_hospitals)
+
+summary(hhc_hosp_rev$Length.of.Stay)
+summary(private_hosp_rev$Length.of.Stay)
+
+sd(hhc_hosp_rev$Length.of.Stay)
+sd(hhc_hosp_rev$Length.of.Stay)
+
+### Standard error calculation
+
+sqrt((sd(hhc_hosp_rev$Length.of.Stay)^2)/192233 + (sd(private_hosp_rev$Length.of.Stay)^2)/947975)
+
+###Standard error equals 0.06
+
+##T-score
+(mean(private_hosp_rev$Length.of.Stay)-mean(hhc_hosp_rev$Length.of.Stay))/0.06
+
+```
+**The T-score is 40.  Again we reject the null hypothesis and conclude that there is a statistically significant difference in means.**  
+
+#### 4E: Hospital admissions for differing severity of illness  
+```{r}
+sickest_pts <- filter(all_hosp_data, APR.Severity.of.Illness.Code == 4)
+
+hhc_hosp_sick <- filter(sickest_pts, Facility.Name %in% hhc_hospitals)
+private_hosp_sick <- filter(sickest_pts, !Facility.Name %in% hhc_hospitals)
+
+summary(hhc_hosp_sick$Length.of.Stay)
+summary(private_hosp_sick$Length.of.Stay)
+
+### Standard error calculation
+
+sqrt((sd(hhc_hosp_sick$Length.of.Stay)^2)/9021 + (sd(private_hosp_sick$Length.of.Stay)^2)/67080)
+
+###Standard error equals 0.34
+
+##T-score
+(mean(private_hosp_sick$Length.of.Stay)-mean(hhc_hosp_sick$Length.of.Stay))/0.34
+
+```
+**T-score is 2.2.  This time we accept the null hypothesis and conclude that there is no statistically significant difference in means.**  
+
+```{r}
+sickest_pts3 <- filter(all_hosp_data, APR.Severity.of.Illness.Code == 3)
+
+hhc_hosp_sick3 <- filter(sickest_pts3, Facility.Name %in% hhc_hospitals)
+private_hosp_sick3 <- filter(sickest_pts3, !Facility.Name %in% hhc_hospitals)
+
+summary(hhc_hosp_sick3$Length.of.Stay)
+summary(private_hosp_sick3$Length.of.Stay)
+
+### Standard error calculation
+
+sqrt((sd(hhc_hosp_sick3$Length.of.Stay)^2)/33920 + (sd(private_hosp_sick3$Length.of.Stay)^2)/206190)
+
+###Standard error equals 0.17
+
+##T-score
+(mean(private_hosp_sick3$Length.of.Stay)-mean(hhc_hosp_sick3$Length.of.Stay))/0.17
+
+```
+
+```{r}
+sickest_pts12 <- filter(all_hosp_data, APR.Severity.of.Illness.Code == 2 | APR.Severity.of.Illness.Code == 1)
+
+hhc_hosp_sick12 <- filter(sickest_pts12, Facility.Name %in% hhc_hospitals)
+private_hosp_sick12 <- filter(sickest_pts12, !Facility.Name %in% hhc_hospitals)
+
+summary(hhc_hosp_sick12$Length.of.Stay)
+summary(private_hosp_sick12$Length.of.Stay)
+
+### Standard error calculation
+
+sqrt((sd(hhc_hosp_sick12$Length.of.Stay)^2)/158360 + (sd(private_hosp_sick12$Length.of.Stay)^2)/724289)
+
+###Standard error equals 0.073
+
+##T-score
+(mean(private_hosp_sick12$Length.of.Stay)-mean(hhc_hosp_sick12$Length.of.Stay))/0.073
+
+```
+**For the less sick patients (those rated "3" or "1/2"), T-scores are 25 and 20 respectively, we reject the null hypothesis each time and there is a statistically different in means.**  
+
+Final note: You can also use a Z-score to compare two means, and since these data are populations, it might be better to use a Z-score.  Z-scores are calculated using a similar formula to T-tests.  In looking up the associated Z-scores in the Z-score table, it appears that using a Z-score would not have changed any of my inferences noted above.
+
+
+### Part 5 - Conclusion:  
+
+In nearly all of the hypothesis tests I ran, I rejected the null hypothesis indicating there was a statistically significant difference in the mean length of stay between public hosptals and private hospitals in NYC. The one exception was for the sickest patients - those marked with APR severity of sickness code "4" (the highest level.) However, for less sick patients, there continued to be a statistically significant difference (and even for the sickest patients, the difference would have been significant if I'd used a 95% of lower confidence level.)  We cannot conclude that there is any reason behind the difference, just that there is a difference.  That said, it is important to note that because the sample size was so large, even small differences would come over as significant like in this case - where the difference in means was often 1 or 2 days compared to ranges of over 120.
+
+### References:  
+
+SPARCS data accessed via Health Data NY (https://health.data.ny.gov/)
+
