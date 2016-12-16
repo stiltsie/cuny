@@ -1,0 +1,186 @@
+---
+title: "CUNY 606 Final Exam"
+author: "Alex Low"
+date: "December 12, 2016"
+output: html_document
+---
+
+##PART I
+
+a. Describe the two distributions (2 pts).
+
+- Figure A is unimodal and has a right skew.
+- Figure B is unimodal and normally distributed. 
+
+b. Explain why the means of these two distributions are similar but the standard deviations are not (2 pts).
+
+- Figure A shows the overall distribution of individual observations, while figure B shows the distribution of the means of several samples. If you conduct a large number of sufficiently sized samples, you would expect them to center around the true population mean as happens in this case.  The standard deviation for (a) is assessing the variance in the overall population, whereas the standard deviation in (b) is assessing the variance in the means of samples, which tend to vary less.
+
+c. What is the statistical principal that describes this phenomenon (2 pts)?
+
+- The statistical principle that describes this phenomen indicates that smaller, sample means will vary less than individual observations. Per the Central Limit Theorem, a large set of sample means will also be normally distributed, even if the underlying distribution is not normal (as it looks like in this case.)
+
+##PART II
+
+a. The mean (for x and y separately; 1 pt).
+```{r}
+
+options(digits=2)
+data1 <- data.frame(x=c(10,8,13,9,11,14,6,4,12,7,5),
+y=c(8.04,6.95,7.58,8.81,8.33,9.96,7.24,4.26,10.84,4.82,5.68))
+data2 <- data.frame(x=c(10,8,13,9,11,14,6,4,12,7,5),
+y=c(9.14,8.14,8.74,8.77,9.26,8.1,6.13,3.1,9.13,7.26,4.74))
+data3 <- data.frame(x=c(10,8,13,9,11,14,6,4,12,7,5),
+y=c(7.46,6.77,12.74,7.11,7.81,8.84,6.08,5.39,8.15,6.42,5.73))
+data4 <- data.frame(x=c(8,8,8,8,8,8,8,19,8,8,8),
+y=c(6.58,5.76,7.71,8.84,8.47,7.04,5.25,12.5,5.56,7.91,6.89))
+
+mean(data1$x)
+mean(data1$y)
+mean(data2$x)
+mean(data2$y)
+mean(data3$x)
+mean(data3$y)
+mean(data4$x)
+mean(data4$y)
+```
+
+b. The median (for x and y separately; 1 pt).
+```{r}
+median(data1$x)
+median(data1$y)
+median(data2$x)
+median(data2$y)
+median(data3$x)
+median(data3$y)
+median(data4$x)
+median(data4$y)
+```
+
+c. The standard deviation (for x and y separately; 1 pt).
+
+```{r}
+sd(data1$x)
+sd(data1$y)
+sd(data2$x)
+sd(data2$y)
+sd(data3$x)
+sd(data3$y)
+sd(data4$x)
+sd(data4$y)
+```
+
+d. The correlation (1 pt).
+```{r}
+cor(data1$x,data1$y)
+cor(data2$x,data2$y)
+cor(data3$x,data3$y)
+cor(data4$x,data4$y)
+```
+
+e. Linear regression equation (2 pts).
+f. R-Squared (2 pts).
+```{r}
+library(dplyr)
+summary(lm(data1$y ~ data1$x))
+summary(lm(data2$y ~ data2$x))
+summary(lm(data3$y ~ data3$x))
+summary(lm(data4$y ~ data4$x))
+
+```
+
+Data set 1
+Y = 3 + 0.5x
+R-squared: 0.667
+
+Data set 2
+Y = 3.001 + 0.5x
+R-squared: 0.666
+
+Data set 3
+Y = 3.002 + 0.5x
+R-squared: 0.666
+
+Data set 4
+Y = 3.002 + 0.5x
+R-squared: 0.667
+
+For each pair, is it appropriate to estimate a linear regression model? Why or why not? Be speci???c as to why for each pair and include appropriate plots!
+
+First, it is worth noting that all the coefficients in the above models show small p values that are statistically significant.  However, we need to perform additional tests to find out if linear equations are appropriate and reliable.
+
+``` {r data1}
+
+d1 <- lm(data1$y ~ data1$x)
+
+#Linearity
+#Constant variability
+plot(data1$y ~ data1$x)
+plot(d1$residuals ~ data1$y)
+abline(h = 0, lty = 3)
+#Nearly normal residuals
+hist(d1$residuals)
+qqnorm(d1$residuals)
+qqline(d1$residuals) 
+
+```
+
+Data 1: The relationship between the variables appears to be linear and there is relatively constant variability. The residuals are not clearly normal acccording to the histogram but the QQ plot looks ok. I therefore conlude that it is appropriate to estimate a linear regression model.
+
+``` {r data2}
+
+d2 <- lm(data1$y ~ data1$x)
+
+#Linearity
+#Constant variability
+plot(data2$y ~ data1$x)
+plot(d2$residuals ~ data2$y)
+abline(h = 0, lty = 3)
+#Nearly normal residuals
+hist(d2$residuals)
+qqnorm(d2$residuals)
+qqline(d2$residuals) 
+
+```
+
+Data 2: The relationship between the variables does not appear to be linear and there is not constant variability. Therefore I do not believe it is appropriate to estimate a linear regression model for this data set.
+
+``` {r data3}
+
+d3 <- lm(data3$y ~ data3$x)
+
+#Linearity
+#Constant variability
+plot(data3$y ~ data3$x)
+plot(d3$residuals ~ data3$y)
+abline(h = 0, lty = 3)
+#Nearly normal residuals
+hist(d3$residuals)
+qqnorm(d3$residuals)
+qqline(d3$residuals) 
+
+```
+
+Data 3: The relationship between the variables appears to be linear but there is not constant variability. Despite the fact that the residuals appear to be normal, I would still conlude that it is inappropriate to estimate a linear regression model given the lack of constant variability.
+
+``` {r data4}
+
+d4 <- lm(data4$y ~ data4$x)
+
+#Linearity
+#Constant variability
+plot(data4$y ~ data4$x)
+plot(d4$residuals ~ data4$y)
+abline(h = 0, lty = 3)
+#Nearly normal residuals
+hist(d4$residuals)
+qqnorm(d4$residuals)
+qqline(d4$residuals) 
+
+```
+
+Data 4: Again, there is not constant variability. so again I would conclude that it is inappropriate to estimate a linear regression model.
+
+Explain why it is important to include appropriate visualizations when analyzing data. Include any visualization(s) you create.
+
+I would suggest that the answers above clearly illustrate why it is important to include appropirate visualizations.  By just looking at the linear equations and R-squared values, you would assume that (a) all four data sets would be almost identical since they each had a similar linear regression equation associated with them.  As we subsequently saw when making scatterplots, not only are all these data sets very different, but not all of them were appropriate to associate with linear models.  This fact would have been lost if not for the scatteplots of x against y and residuals against y.
