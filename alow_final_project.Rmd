@@ -1,0 +1,208 @@
+---
+title: "Data 607 Final Project"
+author: "Alex Low"
+date: "December 18, 2016"
+output: html_document
+---
+
+## Introduction
+Hospitals today are graded by the Center for Medicare and Medicaid Services (CMS), the government agency that runs Medicare, on a variety of quality scores. One set includes patient satisfaction scores. They are somewhat controversial as it is unclear how much hospitals are truly responsible for satisfaction and whether consumers are grading hospitals on the right set of criteria.
+
+For my project, I decided to collect key characteristics on a hospital's geography and its characteristics: (a) the hospital's region within the U.s.; (b) key environmental and socio-economic variables on the hospital's county from the US Census; and (c) a grid of data on a county's happiness factor which I had found in an article online. (https://smartasset.com/mortgage/the-happiest-places-in-america-2016-edition)
+
+By collecting this information, I wanted to identify whether there is regional variation in patient satisfaction scores; and whether it correlates with any socio-demographic factors.
+
+## Data Preparation
+For this project, I followed the workflow and processes described by Grolemund and Wickham in R for Data Science (http://r4ds.had.co.nz):
+
+![](http://r4ds.had.co.nz/diagrams/data-science.png)
+
+I first imported and then combined various data sets to support the analysis. This included the following data sources:
+- Hospital information from the Hospital Compare website via Medicare.Data.Gov.
+- Several sources of U.S. Census and American Community Survey via https://factfinder.census.gov/
+- Regional data from the US Dept of Agriculture indicating to what extent a county was rural or urban via https://www.ers.usda.gov/data-products/rural-urban-continuum-codes.aspx
+- County "happiness" data from Smart Asset (kindly emailed to me upon request)
+
+Notes
+- CMS measures hospitals on a few separate patient satisfaction scores. In the interest of time, I only used one summary measure ("Patient Survey Star Rating" which rated hospitals 1-5 but only if they had enough people who responded to the survey.)
+- For Census and American Community Survey, I selected a subset of variables which I thought would be important.  These included fields like income, unemployment race, ethnicity, and education.
+- It turned out that Smart Asset's "happiness" measure included a lot of information that seemed to come from the Census. But I liked the fact they used a composite score so decided to retain that data set.
+
+As usual, this was the part of the process that took the most time - formatting columns into computable formats, reorganziing columns, renaming headings et al.
+
+```{r message=FALSE}
+
+library(stringr)
+library(choroplethr)
+library(choroplethrMaps)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+
+##Prepare hospital HCAHPS data
+
+hospital_hcahps <- read.csv("Hospital_HCAHPS.csv", stringsAsFactors = FALSE)
+hospital_hcahps$Patient.Survey.Star.Rating <- str_replace_all(hospital_hcahps$Patient.Survey.Star.Rating,pattern="Not Applicable",replacement=NA)
+hospital_hcahps$Patient.Survey.Star.Rating <- str_replace_all(hospital_hcahps$Patient.Survey.Star.Rating,pattern="Not Available",replacement=NA)
+hospital_hcahps$Patient.Survey.Star.Rating <- as.numeric(hospital_hcahps$Patient.Survey.Star.Rating)
+hospital_hcahps$County.Name <- tolower(hospital_hcahps$County.Name)
+colnames(hospital_hcahps)[7] <- "County"
+colnames(hospital_hcahps)[5] <- "State.y"
+
+# Prepare census economic data
+
+acs_econ <- read.csv("ACS_14_Econ.csv", stringsAsFactors = FALSE)
+colnames(acs_econ) <- c("ID", "FIPS", "County_State", "Percent_Labor", "Percent_Unemployed", "Median_Income","Percent_Poverty")
+split_columns <- str_split_fixed(acs_econ$County_State, ",",2)
+acs_econ2 <- cbind(acs_econ, split_columns)
+colnames(acs_econ2) <- c("ID", "FIPS", "County_State", "Percent_Labor", "Percent_Unemployed", "Median_Income","Percent_Poverty","County","State")
+acs_econ2$County <- str_replace_all(acs_econ2$County, pattern = " County", replacement = "")
+
+acs_econ2 <- within(acs_econ2, labor_decile <- as.integer(cut(Percent_Labor, quantile(Percent_Labor, probs=0:10/10), include.lowest=TRUE)))
+acs_econ2 <- within(acs_econ2, unemployment_decile <- as.integer(cut(Percent_Unemployed, quantile(Percent_Unemployed, probs=0:10/10), include.lowest=TRUE)))
+acs_econ2 <- within(acs_econ2, income_decile <- as.integer(cut(Median_Income, quantile(Median_Income, probs=0:10/10), include.lowest=TRUE)))
+acs_econ2 <- within(acs_econ2, poverty_decile <- as.integer(cut(Percent_Poverty, quantile(Percent_Poverty, probs=0:10/10), include.lowest=TRUE)))
+acs_econ2$County <- tolower(acs_econ2$County)
+
+# Prepare census social data
+census_dem <- read.csv("DEC_10_Dem.csv", stringsAsFactors = FALSE)
+split_columns2 <- str_split_fixed(census_dem$Geography, ",",2)
+census_dem2 <- cbind(census_dem, split_columns2)
+colnames(census_dem2) <- c("ID", "FIPS", "Geography", "Percent_AfrAm", "Percent_Hispanic","County","State")
+census_dem2$County <- str_replace_all(census_dem2$County, pattern = " County", replacement = "")
+census_dem2$County <- tolower(census_dem2$County)
+census_dem2 <- within(census_dem2, afram_decile <- as.integer(cut(Percent_AfrAm, quantile(Percent_AfrAm, probs=0:10/10), include.lowest=TRUE)))
+census_dem2 <- within(census_dem2, hispanic_decile <- as.integer(cut(Percent_Hispanic, quantile(Percent_AfrAm, probs=0:10/10), include.lowest=TRUE)))
+
+census_econ <- merge(x=acs_econ2,y=census_dem2,by.x = c("FIPS","County"), by.y = c("FIPS","County"))
+
+# Prepare more social and education data
+
+social <- read.csv("Social.csv", stringsAsFactors = FALSE)
+social_split <- str_split_fixed(social$Geography, ",",2)
+social2 <- cbind(social, social_split)
+colnames(social2) <- c("ID", "FIPS", "County_State", "Percent_Bach_Degree", "Percent_Foreign_Born","County","State")
+social2$County <- str_replace_all(social2$County, pattern = " County", replacement = "")
+social2$County <- tolower(social2$County)
+
+census_social <- merge(x=census_econ,y=social2,by.x = c("FIPS","County"), by.y = c("FIPS","County"))
+census_social$State <- str_trim(census_social$State)
+census_social <- census_social[,-c(3,4,14,15,18,21,22)]
+
+## Integrate urban/rural data
+ruralurban_data <- read.csv("ruralurbancodes2013.csv", stringsAsFactors = FALSE)
+ruralurban_data$County_Name <- str_replace_all(ruralurban_data$County_Name, pattern = " County", replacement = "")
+ruralurban_data$County_Name <- tolower(ruralurban_data$County_Name)
+census_social2 <- merge(x=census_social,y=ruralurban_data,by.x = c("FIPS","County"), by.y = c("FIPS","County_Name"))
+census_social2 <- census_social2[,-7]
+
+## Integrate CAHPS (patient satisfaction) data
+hcahps_census <- join(hospital_hcahps,census_social2, by=c("County","State.y"),type='left',match='all')
+
+## Integrate Region data
+regions <- read.csv("Regions.csv", stringsAsFactors = FALSE)
+colnames(regions)[1] <- "State.y"
+hcahps_census2 <- join(hcahps_census,regions,by='State.y',type='left',match='all')
+
+#NE: New England (Connecticut, Maine, Massachusetts, New Hampshire, Rhode Island, and Vermont)
+#MA: Mid-Atlantic (New Jersey, New York, and Pennsylvania)
+#ENC: North Central (Iowa, Kansas, Minnesota, Missouri, Nebraska, North Dakota, and South Dakota)
+#SA: South Atlantic (Delaware, Florida, Georgia, Maryland, North Carolina, South Carolina, Virginia, District of Columbia, and West Virginia)
+#ESC: East South Central (Alabama, Kentucky, Mississippi, and Tennessee)
+#WSC West South Central (Arkansas, Louisiana, Oklahoma, and Texas)
+#MT: Mountain (Arizona, Colorado, Idaho, Montana, Nevada, New Mexico, Utah, and Wyoming)
+#PAC: Pacific (Alaska, California, Hawaii, Oregon, and Washington)
+
+## Integrate "happiness" ranking
+smart_asset <- read.csv("SmartAssetHappiestPlaces.csv", stringsAsFactors = FALSE)
+colnames(smart_asset)[12] <- "Happiness.Index"
+smart_asset$County <- tolower(smart_asset$County)
+
+hcahps_census3 <- merge(x=hcahps_census2,y=smart_asset, by.x = c("State.x","County"), by.y = c("State","County"))
+
+```
+
+## Descriptive Statistics on Key Data Points
+
+I first compiled some high level statistics on the data sets to illustrate the data set I was working with.  Notably, only 50% of counties have a hospital in them (at least one which reports to CMS, which is the vast majority.)  And of those, only
+
+```{r message=FALSE}
+
+length(unique(hospital_hcahps$Provider.ID)) ## Total No of Hospitals in HCAHPS Data Set
+length(unique(census_dem$Id2)) ## Total No of Counties in Census Data Set
+length(unique(hcahps_census$FIPS)) ## Total No of Counties in Hospital Data Set
+round(length(unique(hcahps_census$FIPS)) / length(unique(hospital_hcahps$Provider.ID)),2) ## Total Proportion of Counties with Hospital
+
+HCAHPS_Star_Subset <- filter(hcahps_census2,HCAHPS.Question=="Summary star rating") ## Filter to hospitals and their "summary star rating."
+
+summary(HCAHPS_Star_Subset$Patient.Survey.Star.Rating) 
+
+HCAHPS_Star_Subset2 <- HCAHPS_Star_Subset[,c(12,23,42)]
+
+regional_summary <- group_by(HCAHPS_Star_Subset2,Region)
+
+regional_summary <- summarise(regional_summary,Avg.Score=mean(Patient.Survey.Star.Rating,na.rm=TRUE))
+
+ggplot(regional_summary, aes(x=Region,y=Avg.Score)) + geom_bar(stat="identity", fill="blue") +ggtitle("Avg Patient Satisfaction Score by Region")
+
+```
+
+## Statistical Analyses
+
+I tried developing several logistical regression models using either single or multiple variables trying to assess their association with the dependent variable - the hospitals' patient satisfaction scores.  I also tried a few variations of socio-economic factors: one involving the raw data, another converting those data into deciles to standardize the features. 
+
+```{r warning=FALSE}
+
+## Looking at regional data alone
+
+hcahps_model_region <- lm(Patient.Survey.Star.Rating ~ Region, data = hcahps_census2)
+summary(hcahps_model_region)
+
+hcahps_model_rural <- lm(Patient.Survey.Star.Rating ~ RUCC_2013, data = hcahps_census2)
+summary(hcahps_model_rural)
+
+## Looking at socio-economic factors alone
+
+hcahps_model_social <- lm(Patient.Survey.Star.Rating ~ labor_decile+afram_decile+hispanic_decile+RUCC_2013, data = hcahps_census)
+summary(hcahps_model_social) # decile info
+
+hcahps_model_socialb <- lm(Patient.Survey.Star.Rating ~ Percent_Labor+Percent_Unemployed+Median_Income+Percent_Poverty+Percent_AfrAm+Percent_Bach_Degree+Percent_Foreign_Born, data = hcahps_census2)
+summary(hcahps_model_socialb) # raw data
+
+## Looking at "happiness" data alone
+hcahps_model_happy <- lm(Patient.Survey.Star.Rating ~ Happiness.Index, data = hcahps_census3)
+summary(hcahps_model_happy)
+
+## Looking at combination of socio-economic and regional factors
+
+hcahps_model2a <- lm(Patient.Survey.Star.Rating ~ labor_decile+afram_decile+hispanic_decile+RUCC_2013+Region, data = hcahps_census2)
+summary(hcahps_model2a)
+
+hcahps_model2b <- lm(Patient.Survey.Star.Rating ~ Percent_Labor+Percent_Unemployed+Median_Income+Percent_Poverty+Percent_AfrAm+Percent_Bach_Degree+Percent_Foreign_Born+RUCC_2013+Region, data = hcahps_census2)
+summary(hcahps_model2b)
+
+hcahps_model2c <- lm(Patient.Survey.Star.Rating ~ labor_decile+afram_decile+hispanic_decile+RUCC_2013+Region+Happiness.Index, data = hcahps_census3)
+summary(hcahps_model2c)
+```
+
+Finally, I also started using mapping tools to create maps of the county level data.
+
+```{r warning=FALSE}
+## Mapping the county level scores of hospitals
+
+hcahps_county <- hcahps_census2 %>% group_by(FIPS) %>% summarise(Avg.HCAHPS.Score = mean(Patient.Survey.Star.Rating, na.rm = TRUE))
+colnames(hcahps_county) <- c("region","value")
+county_choropleth(hcahps_county, title = "Patient Satisfaction Scores by County", legend = "Patient Satisfaction Score")
+```
+
+## Conclusion
+
+Individually both several individual variables relating to which region a hospital was in - and the socio-economic characteristics - had significantly significant relationships with the patient satisfaction score.  In addition, it turned out that the raw data seemed to create models with stronger R-squared figures than the decile figures. For this week's presentation, I will also assess the reliability of a linear equations for this analysis. No strong conclusion emerged from the map, though there were clearly some pockets with either strong performance (areas of Maine and Michigan) or poor performance(sections of southern California and southern Florida..)
+
+## Lessons Learned
+
+- Dplyr gave me all sorts of problems - often not functioning properly if other packages were running - both within the console and when knitting.  It might have been because I used both dplyr and plyr which I later realized was unnecessary. Given how important a tool it is, I am very motivated to figure out how to resolve those issues. 
+- I only belated found it, but the "Within" command can be helpful to avoid writing the bame of the data frame every time you are manipulating a column.
+- To merge data frames, requiring one to many match (e.g. county data to State data), I could not use the regular "merge" command.  Instead plyr's join command was very helpful. 
+- I experienced occasional issues with the str_split function  which would sometimes split character fields into factors. Using a separate stringr command afterwards seemed to fix the issue.
+- I found some code for deriving quantiles on Stack Overflow - it came in handy for this exercise and I suspect will come in v handy for other exercises too! (http://stackoverflow.com/questions/7508229/how-to-create-a-column-with-a-quartile-rank)
