@@ -1,0 +1,219 @@
+---
+title: "Math 605 Final Exam"
+author: "Alex Low"
+date: "May 24, 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## CUNY 605 Final Exam - May 24, 2017  
+
+
+### Probability
+
+Assumptions:  
+- For "2nd quartile," use traditional definition (ie median)  
+- For "4th quartile," use the lower bound of the 4th quartile  
+
+```{r message=FALSE}
+library(dplyr)
+library(MASS)
+library(ggplot2)
+library(Hmisc)
+
+train_data <- read.csv("C:/Data/train.csv")
+
+summary(train_data$LotArea)
+length(train_data$LotArea)
+
+#4th quartile: 11601.5
+
+#P(X>x)
+
+count(train_data, LotArea>11601.5)
+
+365/1460
+
+summary(train_data$SalePrice)
+length(train_data$SalePrice)
+
+#2nd quartile: 163000
+
+#P(Y>y)
+
+count(train_data, SalePrice>163000)
+
+728/1460
+```
+
+P(X>x | Y>y) - the probability that X is higher than the 4th quartile given than Y is higher than the 2nd quartile  
+P(X>x, Y>y) - the probability that X is higher than the 4th quartile and Y is higher than the 2nd quartile  
+P(X<x | Y>y) - the probability that X is less than the 4th quartile given than Y is higher than the 2nd quartile  
+
+```{r}
+
+
+q2_sales <- filter(train_data,SalePrice>163000)
+
+count(q2_sales, LotArea>11601.5)
+
+#P(X>x | Y>y)
+276/728
+
+# P(X>x, Y>y)
+276/1460
+
+# P(X<x | Y>y)
+
+count(q2_sales, LotArea<11601.5)
+
+452/728 
+```
+
+Tests of independence  
+
+```{r}
+#P(X>x, Y>y) = 18.9%
+#P(X>x)*P(Y>y)=25%*50%=12.5%
+
+#Since the probability of x given y is not equal to the probability of x, no, they are not independent.
+
+q4_lots <- filter(train_data, LotArea>11601.5)
+
+count(q4_lots, SalePrice>163000)
+
+276/365 #0.756
+
+chi_table <- matrix(c(276,(365-276),(728-276),(732-(365-276))),nrow=2)
+
+chi_table
+
+chisq.test(chi_table)
+
+```
+
+Conclusion: Given the tiny p value, we reject the null hypothesis that Lot Area is independent of Sale Price  
+
+###Descriptive and Inferential Statistics  
+
+```{r}
+
+describe(train_data$SalePrice)
+
+describe(train_data$LotArea)
+
+options(scipen=5)
+
+Sale_plots <- ggplot(data=train_data)
+
+Sale_plots + geom_histogram(aes(x=SalePrice), binwidth = 10000) + ggtitle("Histogram of Sale Price Values") + labs(x="Sale Price ($)")
+
+boxplot(train_data$SalePrice,main="Boxplot of Sale Prices",ylab="Sale Price")
+
+Sale_plots + geom_histogram(aes(x=LotArea), binwidth = 1000) + ggtitle("Histogram of Lot Areas") + labs(x="Lot Area (Sq Ft)")
+
+boxplot(train_data$LotArea,main="Boxplot of Lot Areas",ylab="Lot Area")
+
+plot(train_data$LotArea,train_data$SalePrice,main="Scatterplot of Lot Areas / Sale Prices",xlab="Lot Area (Sq Ft)",ylab="Sale Price ($)")
+
+train_lm <- lm(train_data$SalePrice ~ train_data$LotArea)
+
+summary(train_lm)
+
+tf_values <- boxcox(log(SalePrice) ~ log(LotArea), lambda = seq(-3, 3, 1/10),  data = train_data)
+
+tf_analysis <- lm(tf_values$y ~ tf_values$x)
+
+summary(tf_analysis)
+
+cor.test(tf_values$x,tf_values$y,method="pearson",alternative = "two.sided",conf.level = 0.99)
+
+```
+Conclusion: Given the tiny p value, and the fact that 0 is not within the confidence interval, we reject the null hypothesis that the correlation is equal to 0.  
+
+### Linear Algebra and Correlation  
+```{r}
+
+tf_df <- cbind(tf_values$y,tf_values$x)
+
+cor(tf_df)
+
+tf_inverse <- solve(cor(tf_df))
+
+tf_inverse %*% cor(tf_df)
+
+cor(tf_df) %*% tf_inverse
+
+```
+
+###Calculus-Based Probability & Statistics  
+
+```{r}
+
+fitdistr(train_data$LotArea, densfun = "exponential")
+
+fitdistr(train_data$LotArea, densfun = "lognormal")
+
+hist(rexp(1000,9.508570e-05),breaks=20, xlab="Lot Area", main="Lot Area Samples - Exponential Distribution")
+
+hist(rlnorm(1000,mean=9.110838240,sd=0.517270830),breaks=20,xlab="Lot Area", main="Lot Area Samples - Lognormal Distribution")
+
+```
+
+###Modeling  
+
+Steps:  
+Much trial and error including...  
+- Assessed numerical values, their correlation with SalePrice; and their p value
+- Converted categorical values, and again assessed their p value  
+- Tried a couple of different regression approaches
+
+```{r}
+
+train_num <- subset(train_data,select=c(LotArea,OverallQual,OverallCond,TotalBsmtSF,BsmtFullBath,GarageArea,PoolArea,TotRmsAbvGrd,Fireplaces,WoodDeckSF,OpenPorchSF,EnclosedPorch,SalePrice))
+
+cor(train_num)
+
+#lm1 <- lm(SalePrice ~ LotArea+OverallQual+OverallCond+TotalBsmtSF+BsmtFullBath+GarageArea, data=train_num)
+
+#summary(lm1)
+
+train_data$ExterQual <- factor(train_data$ExterQual)
+
+train_data$ExterCond <- factor(train_data$ExterCond)
+
+train_data$Neighborhood <- factor(train_data$Neighborhood)
+
+train_data$MiscFeature <- factor(train_data$MiscFeature)
+
+#lm3 <- glm(SalePrice ~ LotArea+OverallQual+OverallCond+TotalBsmtSF+BsmtFullBath+GarageArea+Neighborhood+ExterQual+KitchenQual+TotRmsAbvGrd+Fireplaces+WoodDeckSF+OpenPorchSF, data=train_data)
+
+#summary(lm3)
+
+lm3a <- lm(SalePrice ~ LotArea+OverallQual+OverallCond+TotalBsmtSF+BsmtFullBath+GarageArea+Neighborhood+ExterQual+KitchenQual+TotRmsAbvGrd+Fireplaces+WoodDeckSF+OpenPorchSF, data=train_data)
+
+#summary(lm3a)
+
+lm3_link <- glm(SalePrice ~ LotArea+OverallQual+OverallCond+TotalBsmtSF+BsmtFullBath+GarageArea+Neighborhood+ExterQual+KitchenQual+TotRmsAbvGrd+Fireplaces+WoodDeckSF+OpenPorchSF,family=gaussian(link="log"), data=train_data)
+
+summary(lm3_link)
+
+test_data <- read.csv("C:/Data/test.csv")
+
+sale_predictions <- predict(lm3a,newdata = test_data)
+
+median(sale_predictions,na.rm=TRUE)
+
+sale_file <- as.data.frame(cbind(test_data$Id,sale_predictions))
+
+colnames(sale_file) = c("Id","SalePrice")
+
+write.csv(sale_file,file="C:/Data/ALow_605_Final.csv",na="164650.2")
+
+```
+Kaggle score is 0.19089.  User name is stiltsie.
