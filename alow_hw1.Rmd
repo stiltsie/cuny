@@ -1,0 +1,72 @@
+---
+title: "CUNY Data 608 Homework 1"
+author: "Alex Low"
+date: "September 12, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1  
+
+```{r message=FALSE, fig.width=10,fig.height=15}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+
+companies_data <- fread('https://raw.githubusercontent.com/charleyferrari/CUNY_DATA608/master/lecture1/Data/inc5000_data.csv')
+
+companies_data$Revenue = as.numeric(companies_data$Revenue)
+
+companies_state <- count(companies_data,State)
+
+comp_state_order <- arrange(companies_state,desc(n))
+
+head(comp_state_order)
+
+ggplot(comp_state_order, aes(x = reorder(State, n), y = n)) + geom_bar(stat = "identity",colour="blue") + coord_flip() + labs(x='State',y='Number of Companies') + scale_y_continuous(breaks=c(0,100,200,300,400,700))+ggtitle("Distribution of Companies by State")
+
+```
+
+
+## Question 2  
+```{r, fig.width=7,fig.height=10}
+ny_companies <- companies_data[str_detect(companies_data$State, 'NY')]
+
+ny_companies <- ny_companies[complete.cases(ny_companies),]
+
+ggplot(ny_companies, aes(y=Employees, x=Industry))+geom_boxplot()+ theme(axis.text.x = element_text(angle=90))
+
+#Removing outliers from the data set
+
+ny_companies2 <- dplyr::filter(ny_companies,Employees < (2*sd(Employees)+mean(Employees))& Employees > (mean(Employees)-2*sd(Employees)))
+
+ny_avg_emp <- ny_companies2 %>% group_by(Industry) %>% summarise(avg = mean(Employees)) %>% arrange(desc(avg))
+
+head(ny_avg_emp)
+
+ggplot(ny_avg_emp, aes(x = reorder(Industry, -avg), y = avg)) + geom_bar(stat = "identity", fill = "#FF6666")+ theme(axis.text.x  = element_text(angle=90))+ labs(x='Industry',y='Average Employment')+scale_y_continuous(breaks=c(0,20,40,60,80,100,200,300,400,500))+ggtitle("Average Employment by Industry in New York")
+
+```
+
+## Question 3  
+
+```{r}
+
+#Removing outliers from the data set
+
+companies_data2 <- dplyr::filter(companies_data,Revenue < (2*sd(Revenue)+mean(Revenue))& Revenue > (mean(Revenue)-2*sd(Revenue)))
+
+industry_avg_rev <- companies_data2 %>% group_by(Industry) %>% summarise(Avg_Revenue = (sum(Revenue,na.rm=TRUE)/(sum(Employees,na.rm=TRUE))))%>% arrange(desc(Avg_Revenue))
+
+head(industry_avg_rev)
+
+library(scales)
+
+ggplot(industry_avg_rev, aes(x=reorder(Industry,-Avg_Revenue), y = Avg_Revenue)) + geom_bar(stat = "identity")+ theme(axis.text.x  = element_text(angle=90))+ labs(x='Industry',y='Average Revenue Per Employee') + scale_y_continuous(breaks=c(0,100000,200000,300000,400000,500000),labels=comma) + ggtitle("Average Revenue per Employee by Industry")
+
+```
+
